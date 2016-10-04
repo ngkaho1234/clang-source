@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string>
-#include <string.h>
 #include <malloc.h>
 
 #include "clang-source-db.h"
@@ -137,6 +136,159 @@ void cs_db_rollback_txn(cs_db_t *handle)
 	sqlite3_exec(handle, "ROLLBACK;", NULL, NULL, NULL);
 }
 
+int cs_db_select_general(
+		cs_db_t *handle,
+		enum cs_db_table_id table_id,
+		const char **col_name,
+		cs_db_column_t *col,
+		int nr_col,
+		enum cs_db_loopctl_t (*iter)(
+			cs_db_t *handle,
+			enum cs_db_table_id table_id,
+			const char **col_name,
+			cs_db_column_t *col,
+			int nr_col,
+			void *arg
+		),
+		void *iter_arg
+)
+{
+	string sql_command =
+			string("SELECT * FROM ") +
+			string(cs_db_table_ops[table_id].t_name);
+	int i, ret = CS_DB_ERR_OK;
+	sqlite3_stmt *stmt;
+	int nr_res_col;
+	const char **res_col_name = NULL;
+	cs_db_column_t *res_col = NULL;
+
+	if (nr_col)
+		sql_command += " WHERE ";
+
+	for (i = 0; i < nr_col; i++) {
+		sql_command += string(col_name[i]) + " = ?";
+		if (i != nr_col - 1)
+			sql_command += " AND ";
+	}
+
+	ret = sqlite3_prepare_v2(
+			handle,
+			sql_command.c_str(),
+			sql_command.length(),
+			&stmt,
+			NULL);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < nr_col; i++) {
+		switch (col[i].type) {
+		case CS_DB_TYPE_INT:
+			ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
+			break;
+		case CS_DB_TYPE_FLOAT:
+			ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
+			break;
+		case CS_DB_TYPE_NULL:
+			ret = sqlite3_bind_null(stmt, i + 1);
+			break;
+		case CS_DB_TYPE_TEXT:
+			ret = sqlite3_bind_text64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb,
+					SQLITE_UTF8);
+			break;
+		case CS_DB_TYPE_BLOB:
+			ret = sqlite3_bind_blob64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb);
+			break;
+		default:
+			ret = CS_DB_ERR_INVAL;
+		}
+		if (ret != SQLITE_OK)
+			goto cleanup;
+	}
+
+	nr_res_col = sqlite3_column_count(stmt);
+	if (nr_res_col) {
+		res_col = new cs_db_column_t[nr_res_col];
+		if (!res_col)
+			goto cleanup;
+		res_col_name = new const char *[nr_res_col];
+		if (!res_col_name)
+			goto cleanup;
+	}
+	while ((ret = sqlite3_step(stmt)) == SQLITE_ROW) {
+		for (i = 0; i < nr_res_col; i++) {
+			int res_col_size = sqlite3_column_bytes(stmt, i + 1);
+			res_col_name[i] = sqlite3_column_name(stmt, i);
+			switch (sqlite3_column_type(stmt, i + 1)) {
+			case SQLITE_INTEGER:
+				res_col[i].type = CS_DB_TYPE_INT;
+				res_col[i].non_ptr.integer =
+					sqlite3_column_int64(stmt, i + 1);
+				break;
+			case SQLITE_FLOAT:
+				res_col[i].type = CS_DB_TYPE_FLOAT;
+				res_col[i].non_ptr.fp =
+					sqlite3_column_double(stmt, i + 1);
+				break;
+			case SQLITE_NULL:
+				res_col[i].type = CS_DB_TYPE_NULL;
+				break;
+			case SQLITE3_TEXT:
+				res_col[i].type = CS_DB_TYPE_TEXT;
+				res_col[i].ptr.data =
+					sqlite3_column_text(stmt, i + 1);
+				res_col[i].ptr.size = res_col_size;
+				res_col[i].ptr.post_op_cb = NULL;
+				break;
+			case SQLITE_BLOB:
+				res_col[i].type = CS_DB_TYPE_BLOB;
+				res_col[i].ptr.data =
+					sqlite3_column_blob(stmt, i + 1);
+				res_col[i].ptr.size = res_col_size;
+				res_col[i].ptr.post_op_cb = NULL;
+				break;
+			default:
+				throw CS_DB_EXCEPT_UNKNOWN;
+			}
+		}
+		if (iter) {
+			enum cs_db_loopctl_t loopctl;
+			loopctl = iter(
+					handle,
+					table_id,
+					(nr_res_col)?res_col_name:NULL,
+					(nr_res_col)?res_col:NULL,
+					nr_res_col,
+					iter_arg);
+			if (loopctl != CS_DB_LOOP_BREAK) {
+				ret = SQLITE_DONE;
+				break;
+			}
+		}
+	}
+
+	if (ret == SQLITE_DONE)
+		ret = SQLITE_OK;
+cleanup:
+	sqlite3_finalize(stmt);
+
+	if (res_col)
+		delete res_col;
+	if (res_col_name)
+		delete res_col_name;
+
+	return ret;
+}
+
 int cs_db_insert_general(
 		cs_db_t *handle,
 		enum cs_db_table_id table_id,
@@ -170,13 +322,10 @@ int cs_db_insert_general(
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
 			case CS_DB_TYPE_INT:
-				ret = sqlite3_bind_int(stmt, i + 1, col[i].non_ptr.integer);
-				break;
-			case CS_DB_TYPE_INT64:
-				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer64);
+				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
 				break;
 			case CS_DB_TYPE_FLOAT:
-				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.fp);
+				ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
 				break;
 			case CS_DB_TYPE_NULL:
 				ret = sqlite3_bind_null(stmt, i + 1);
@@ -247,13 +396,10 @@ int cs_db_update_general(
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
 			case CS_DB_TYPE_INT:
-				ret = sqlite3_bind_int(stmt, i + 1, col[i].non_ptr.integer);
-				break;
-			case CS_DB_TYPE_INT64:
-				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer64);
+				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
 				break;
 			case CS_DB_TYPE_FLOAT:
-				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.fp);
+				ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
 				break;
 			case CS_DB_TYPE_NULL:
 				ret = sqlite3_bind_null(stmt, i + 1);
@@ -437,13 +583,12 @@ int cs_db_delete_general(
 {
 	string sql_command =
 			string("DELETE FROM ") +
-			string(cs_db_table_ops[table_id].t_name) +
-			string(" WHERE ");
+			string(cs_db_table_ops[table_id].t_name);
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
 
-	if (!nr_col)
-		return CS_DB_ERR_INVAL;
+	if (nr_col)
+		sql_command += " WHERE ";
 
 	for (i = 0; i < nr_col; i++) {
 		sql_command += string(col_name[i]) + " = ?";
@@ -463,13 +608,10 @@ int cs_db_delete_general(
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
 			case CS_DB_TYPE_INT:
-				ret = sqlite3_bind_int(stmt, i + 1, col[i].non_ptr.integer);
-				break;
-			case CS_DB_TYPE_INT64:
-				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer64);
+				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
 				break;
 			case CS_DB_TYPE_FLOAT:
-				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.fp);
+				ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
 				break;
 			case CS_DB_TYPE_NULL:
 				ret = sqlite3_bind_null(stmt, i + 1);
@@ -530,6 +672,23 @@ int cs_db_delete_file_symbols(cs_db_t *handle, const char *filename)
 
 #include <stdio.h>
 #include <stdlib.h>
+
+static enum cs_db_loopctl_t
+cs_db_select_iter(
+	cs_db_t *handle,
+	enum cs_db_table_id table_id,
+	const char **col_name,
+	cs_db_column_t *col,
+	int nr_col,
+	void *arg)
+{
+	int i;
+	for (i = 0; i < nr_col; i++)
+		printf("|%s|", col_name[i]);
+
+	puts("");
+	return CS_DB_LOOP_CONT;
+}
 
 void usage(char **argv)
 {
@@ -597,6 +756,15 @@ int main(int argc, char **argv)
 		cs_db_close(handle);
 		return EXIT_FAILURE;
 	}
+
+	ret = cs_db_select_general(
+		handle,
+		CS_TABLE_SYMBOLS_ID,
+		NULL,
+		NULL,
+		0,
+		cs_db_select_iter,
+		NULL);
 
 	cs_db_close(handle);
 	return EXIT_SUCCESS;
