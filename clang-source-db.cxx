@@ -320,34 +320,34 @@ int cs_db_insert_general(
 
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
-			case CS_DB_TYPE_INT:
-				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
-				break;
-			case CS_DB_TYPE_FLOAT:
-				ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
-				break;
-			case CS_DB_TYPE_NULL:
-				ret = sqlite3_bind_null(stmt, i + 1);
-				break;
-			case CS_DB_TYPE_TEXT:
-				ret = sqlite3_bind_text64(
-						stmt,
-						i + 1,
-						(char *)col[i].ptr.data,
-						col[i].ptr.size,
-						col[i].ptr.post_op_cb,
-						SQLITE_UTF8);
-				break;
-			case CS_DB_TYPE_BLOB:
-				ret = sqlite3_bind_blob64(
-						stmt,
-						i + 1,
-						(char *)col[i].ptr.data,
-						col[i].ptr.size,
-						col[i].ptr.post_op_cb);
-				break;
-			default:
-				ret = CS_DB_ERR_INVAL;
+		case CS_DB_TYPE_INT:
+			ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
+			break;
+		case CS_DB_TYPE_FLOAT:
+			ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
+			break;
+		case CS_DB_TYPE_NULL:
+			ret = sqlite3_bind_null(stmt, i + 1);
+			break;
+		case CS_DB_TYPE_TEXT:
+			ret = sqlite3_bind_text64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb,
+					SQLITE_UTF8);
+			break;
+		case CS_DB_TYPE_BLOB:
+			ret = sqlite3_bind_blob64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb);
+			break;
+		default:
+			ret = CS_DB_ERR_INVAL;
 		}
 		if (ret != SQLITE_OK)
 			goto cleanup;
@@ -394,34 +394,34 @@ int cs_db_update_general(
 
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
-			case CS_DB_TYPE_INT:
-				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
-				break;
-			case CS_DB_TYPE_FLOAT:
-				ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
-				break;
-			case CS_DB_TYPE_NULL:
-				ret = sqlite3_bind_null(stmt, i + 1);
-				break;
-			case CS_DB_TYPE_TEXT:
-				ret = sqlite3_bind_text64(
-						stmt,
-						i + 1,
-						(char *)col[i].ptr.data,
-						col[i].ptr.size,
-						col[i].ptr.post_op_cb,
-						SQLITE_UTF8);
-				break;
-			case CS_DB_TYPE_BLOB:
-				ret = sqlite3_bind_blob64(
-						stmt,
-						i + 1,
-						(char *)col[i].ptr.data,
-						col[i].ptr.size,
-						col[i].ptr.post_op_cb);
-				break;
-			default:
-				ret = CS_DB_ERR_INVAL;
+		case CS_DB_TYPE_INT:
+			ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
+			break;
+		case CS_DB_TYPE_FLOAT:
+			ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
+			break;
+		case CS_DB_TYPE_NULL:
+			ret = sqlite3_bind_null(stmt, i + 1);
+			break;
+		case CS_DB_TYPE_TEXT:
+			ret = sqlite3_bind_text64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb,
+					SQLITE_UTF8);
+			break;
+		case CS_DB_TYPE_BLOB:
+			ret = sqlite3_bind_blob64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb);
+			break;
+		default:
+			ret = CS_DB_ERR_INVAL;
 		}
 		if (ret != SQLITE_OK)
 			goto cleanup;
@@ -606,34 +606,34 @@ int cs_db_delete_general(
 
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
-			case CS_DB_TYPE_INT:
-				ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
-				break;
-			case CS_DB_TYPE_FLOAT:
-				ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
-				break;
-			case CS_DB_TYPE_NULL:
-				ret = sqlite3_bind_null(stmt, i + 1);
-				break;
-			case CS_DB_TYPE_TEXT:
-				ret = sqlite3_bind_text64(
-						stmt,
-						i + 1,
-						(char *)col[i].ptr.data,
-						col[i].ptr.size,
-						col[i].ptr.post_op_cb,
-						SQLITE_UTF8);
-				break;
-			case CS_DB_TYPE_BLOB:
-				ret = sqlite3_bind_blob64(
-						stmt,
-						i + 1,
-						(char *)col[i].ptr.data,
-						col[i].ptr.size,
-						col[i].ptr.post_op_cb);
-				break;
-			default:
-				ret = CS_DB_ERR_INVAL;
+		case CS_DB_TYPE_INT:
+			ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
+			break;
+		case CS_DB_TYPE_FLOAT:
+			ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
+			break;
+		case CS_DB_TYPE_NULL:
+			ret = sqlite3_bind_null(stmt, i + 1);
+			break;
+		case CS_DB_TYPE_TEXT:
+			ret = sqlite3_bind_text64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb,
+					SQLITE_UTF8);
+			break;
+		case CS_DB_TYPE_BLOB:
+			ret = sqlite3_bind_blob64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb);
+			break;
+		default:
+			ret = CS_DB_ERR_INVAL;
 		}
 		if (ret != SQLITE_OK)
 			goto cleanup;
