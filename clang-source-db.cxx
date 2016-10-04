@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string>
-#include <malloc.h>
 
 #include "clang-source-db.h"
 
@@ -282,9 +281,9 @@ cleanup:
 	sqlite3_finalize(stmt);
 
 	if (res_col)
-		delete res_col;
+		delete[] res_col;
 	if (res_col_name)
-		delete res_col_name;
+		delete[] res_col_name;
 
 	return ret;
 }
