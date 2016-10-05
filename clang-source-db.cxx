@@ -438,6 +438,80 @@ cleanup:
 	return ret;
 }
 
+int cs_db_delete_general(
+		cs_db_t *handle,
+		enum cs_db_table_id table_id,
+		cs_db_column_t *col,
+		int nr_col)
+{
+	string sql_command =
+			string("DELETE FROM ") +
+			string(cs_db_table_ops[table_id].t_name);
+	int i, ret = CS_DB_ERR_OK;
+	sqlite3_stmt *stmt;
+
+	if (nr_col)
+		sql_command += " WHERE ";
+
+	for (i = 0; i < nr_col; i++) {
+		sql_command += string(col[i].name) + " = ?";
+		if (i != nr_col - 1)
+			sql_command += " AND ";
+	}
+
+	ret = sqlite3_prepare_v2(
+			handle,
+			sql_command.c_str(),
+			sql_command.length(),
+			&stmt,
+			NULL);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < nr_col; i++) {
+		switch (col[i].type) {
+		case CS_DB_TYPE_INT:
+			ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
+			break;
+		case CS_DB_TYPE_FLOAT:
+			ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
+			break;
+		case CS_DB_TYPE_NULL:
+			ret = sqlite3_bind_null(stmt, i + 1);
+			break;
+		case CS_DB_TYPE_TEXT:
+			ret = sqlite3_bind_text64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb,
+					SQLITE_UTF8);
+			break;
+		case CS_DB_TYPE_BLOB:
+			ret = sqlite3_bind_blob64(
+					stmt,
+					i + 1,
+					(char *)col[i].ptr.data,
+					col[i].ptr.size,
+					col[i].ptr.post_op_cb);
+			break;
+		default:
+			ret = CS_DB_ERR_INVAL;
+		}
+		if (ret != SQLITE_OK)
+			goto cleanup;
+	}
+
+	while ((ret = sqlite3_step(stmt)) == SQLITE_ROW);
+
+	if (ret == SQLITE_DONE)
+		ret = SQLITE_OK;
+cleanup:
+	sqlite3_finalize(stmt);
+	return ret;
+}
+
 int cs_db_insert_symbol(
 		cs_db_t *handle,
 		const char *usr,
@@ -581,80 +655,6 @@ int cs_db_update_symbol(
 		},
 	};
 	return cs_db_update_general(handle, CS_TABLE_SYMBOLS_ID, id, col, 7);
-}
-
-int cs_db_delete_general(
-		cs_db_t *handle,
-		enum cs_db_table_id table_id,
-		cs_db_column_t *col,
-		int nr_col)
-{
-	string sql_command =
-			string("DELETE FROM ") +
-			string(cs_db_table_ops[table_id].t_name);
-	int i, ret = CS_DB_ERR_OK;
-	sqlite3_stmt *stmt;
-
-	if (nr_col)
-		sql_command += " WHERE ";
-
-	for (i = 0; i < nr_col; i++) {
-		sql_command += string(col[i].name) + " = ?";
-		if (i != nr_col - 1)
-			sql_command += " AND ";
-	}
-
-	ret = sqlite3_prepare_v2(
-			handle,
-			sql_command.c_str(),
-			sql_command.length(),
-			&stmt,
-			NULL);
-	if (ret)
-		return ret;
-
-	for (i = 0; i < nr_col; i++) {
-		switch (col[i].type) {
-		case CS_DB_TYPE_INT:
-			ret = sqlite3_bind_int64(stmt, i + 1, col[i].non_ptr.integer);
-			break;
-		case CS_DB_TYPE_FLOAT:
-			ret = sqlite3_bind_double(stmt, i + 1, col[i].non_ptr.fp);
-			break;
-		case CS_DB_TYPE_NULL:
-			ret = sqlite3_bind_null(stmt, i + 1);
-			break;
-		case CS_DB_TYPE_TEXT:
-			ret = sqlite3_bind_text64(
-					stmt,
-					i + 1,
-					(char *)col[i].ptr.data,
-					col[i].ptr.size,
-					col[i].ptr.post_op_cb,
-					SQLITE_UTF8);
-			break;
-		case CS_DB_TYPE_BLOB:
-			ret = sqlite3_bind_blob64(
-					stmt,
-					i + 1,
-					(char *)col[i].ptr.data,
-					col[i].ptr.size,
-					col[i].ptr.post_op_cb);
-			break;
-		default:
-			ret = CS_DB_ERR_INVAL;
-		}
-		if (ret != SQLITE_OK)
-			goto cleanup;
-	}
-
-	while ((ret = sqlite3_step(stmt)) == SQLITE_ROW);
-
-	if (ret == SQLITE_DONE)
-		ret = SQLITE_OK;
-cleanup:
-	sqlite3_finalize(stmt);
-	return ret;
 }
 
 int cs_db_delete_file_symbols(cs_db_t *handle, const char *filename)
