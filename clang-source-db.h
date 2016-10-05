@@ -39,6 +39,7 @@ enum cs_db_exceptions {
 };
 
 typedef struct cs_db_column_s {
+	const char *name;
 	cs_db_type_t type;
 	union {
 		union {
