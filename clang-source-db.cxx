@@ -285,14 +285,23 @@ int cs_db_insert_general(
 		cs_db_column_t *col,
 		int nr_col)
 {
-	string sql_command =
-			string("INSERT INTO ") +
-			string(cs_db_table_ops[table_id].t_name) +
-			string(" VALUES ") +
-			string("(") +
-			((nr_col == 0) ? "NULL" : "NULL, ");
+	string sql_command;
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
+
+	sql_command =
+		string("INSERT INTO ") +
+		string(cs_db_table_ops[table_id].t_name) +
+		string("(");
+	for (i = 0; i < nr_col; i++) {
+		sql_command += col[i].name;
+		if (i != nr_col - 1)
+			sql_command += ", ";
+	}
+	sql_command += ")";
+	sql_command +=
+		string(" VALUES ") +
+		string("(");
 	for (i = 0; i < nr_col; i++) {
 		sql_command += "?";
 		if (i != nr_col - 1)
@@ -441,6 +450,7 @@ int cs_db_insert_symbol(
 {
 	cs_db_column_t col[7] = {
 		{
+			.name = "usr",
 			.type = CS_DB_TYPE_TEXT,
 			.ptr = {
 				usr,
@@ -449,12 +459,14 @@ int cs_db_insert_symbol(
 			}
 		},
 		{
+			.name = "kind",
 			.type = CS_DB_TYPE_INT,
 			.non_ptr = {
 				kind,
 			}
 		},
 		{
+			.name = "name",
 			.type = CS_DB_TYPE_TEXT,
 			.ptr = {
 				name,
@@ -463,6 +475,7 @@ int cs_db_insert_symbol(
 			}
 		},
 		{
+			.name = "type",
 			.type = CS_DB_TYPE_TEXT,
 			.ptr = {
 				type,
@@ -471,6 +484,7 @@ int cs_db_insert_symbol(
 			}
 		},
 		{
+			.name = "file",
 			.type = CS_DB_TYPE_TEXT,
 			.ptr = {
 				file,
@@ -479,12 +493,14 @@ int cs_db_insert_symbol(
 			}
 		},
 		{
+			.name = "start_line",
 			.type = CS_DB_TYPE_INT,
 			.non_ptr = {
 				start_line,
 			}
 		},
 		{
+			.name = "start_col",
 			.type = CS_DB_TYPE_INT,
 			.non_ptr = {
 				start_col,
