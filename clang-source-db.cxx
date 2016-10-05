@@ -138,13 +138,11 @@ void cs_db_rollback_txn(cs_db_t *handle)
 int cs_db_select_general(
 		cs_db_t *handle,
 		enum cs_db_table_id table_id,
-		const char **col_name,
 		cs_db_column_t *col,
 		int nr_col,
 		enum cs_db_loopctl_t (*iter)(
 			cs_db_t *handle,
 			enum cs_db_table_id table_id,
-			const char **col_name,
 			cs_db_column_t *col,
 			int nr_col,
 			void *arg
@@ -158,14 +156,13 @@ int cs_db_select_general(
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
 	int nr_res_col;
-	const char **res_col_name = NULL;
 	cs_db_column_t *res_col = NULL;
 
 	if (nr_col)
 		sql_command += " WHERE ";
 
 	for (i = 0; i < nr_col; i++) {
-		sql_command += string(col_name[i]) + " = ?";
+		sql_command += string(col[i].name) + " = ?";
 		if (i != nr_col - 1)
 			sql_command += " AND ";
 	}
@@ -219,14 +216,11 @@ int cs_db_select_general(
 		res_col = new cs_db_column_t[nr_res_col];
 		if (!res_col)
 			goto cleanup;
-		res_col_name = new const char *[nr_res_col];
-		if (!res_col_name)
-			goto cleanup;
 	}
 	while ((ret = sqlite3_step(stmt)) == SQLITE_ROW) {
 		for (i = 0; i < nr_res_col; i++) {
 			int res_col_size = sqlite3_column_bytes(stmt, i + 1);
-			res_col_name[i] = sqlite3_column_name(stmt, i);
+			res_col[i].name = sqlite3_column_name(stmt, i);
 			switch (sqlite3_column_type(stmt, i + 1)) {
 			case SQLITE_INTEGER:
 				res_col[i].type = CS_DB_TYPE_INT;
@@ -264,7 +258,6 @@ int cs_db_select_general(
 			loopctl = iter(
 					handle,
 					table_id,
-					(nr_res_col)?res_col_name:NULL,
 					(nr_res_col)?res_col:NULL,
 					nr_res_col,
 					iter_arg);
@@ -282,8 +275,6 @@ cleanup:
 
 	if (res_col)
 		delete[] res_col;
-	if (res_col_name)
-		delete[] res_col_name;
 
 	return ret;
 }
@@ -366,7 +357,6 @@ int cs_db_update_general(
 		cs_db_t *handle,
 		enum cs_db_table_id table_id,
 		cs_db_id_t id,
-		const char **col_name,
 		cs_db_column_t *col,
 		int nr_col)
 {
@@ -377,7 +367,7 @@ int cs_db_update_general(
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
 	for (i = 0; i < nr_col; i++) {
-		sql_command += string(col_name[i]) + " = ?";
+		sql_command += string(col[i].name) + " = ?";
 		if (i != nr_col - 1)
 			sql_command += ", ";
 	}
@@ -515,11 +505,9 @@ int cs_db_update_symbol(
 		int start_line,
 		int start_col)
 {
-	const char *col_name[7] = {
-		"usr", "kind", "name", "type", "file", "start_line", "start_col"
-	};
 	cs_db_column_t col[7] = {
 		{
+			.name = "usr",
 			.type = CS_DB_TYPE_TEXT,
 			.ptr = {
 				usr,
@@ -528,12 +516,14 @@ int cs_db_update_symbol(
 			}
 		},
 		{
+			.name = "kind",
 			.type = CS_DB_TYPE_INT,
 			.non_ptr = {
 				kind,
 			}
 		},
 		{
+			.name = "name",
 			.type = CS_DB_TYPE_TEXT,
 			.ptr = {
 				name,
@@ -542,6 +532,7 @@ int cs_db_update_symbol(
 			}
 		},
 		{
+			.name = "type",
 			.type = CS_DB_TYPE_TEXT,
 			.ptr = {
 				type,
@@ -550,6 +541,7 @@ int cs_db_update_symbol(
 			}
 		},
 		{
+			.name = "file",
 			.type = CS_DB_TYPE_TEXT,
 			.ptr = {
 				file,
@@ -558,25 +550,26 @@ int cs_db_update_symbol(
 			}
 		},
 		{
+			.name = "start_line",
 			.type = CS_DB_TYPE_INT,
 			.non_ptr = {
 				start_line,
 			}
 		},
 		{
+			.name = "start_col",
 			.type = CS_DB_TYPE_INT,
 			.non_ptr = {
 				start_col,
 			}
 		},
 	};
-	return cs_db_update_general(handle, CS_TABLE_SYMBOLS_ID, id, col_name, col, 7);
+	return cs_db_update_general(handle, CS_TABLE_SYMBOLS_ID, id, col, 7);
 }
 
 int cs_db_delete_general(
 		cs_db_t *handle,
 		enum cs_db_table_id table_id,
-		const char **col_name,
 		cs_db_column_t *col,
 		int nr_col)
 {
@@ -590,7 +583,7 @@ int cs_db_delete_general(
 		sql_command += " WHERE ";
 
 	for (i = 0; i < nr_col; i++) {
-		sql_command += string(col_name[i]) + " = ?";
+		sql_command += string(col[i].name) + " = ?";
 		if (i != nr_col - 1)
 			sql_command += " AND ";
 	}
@@ -650,8 +643,8 @@ cleanup:
 
 int cs_db_delete_file_symbols(cs_db_t *handle, const char *filename)
 {
-	const char *col_name = "file";
 	cs_db_column_t col = {
+		.name = "file",
 		.type = CS_DB_TYPE_TEXT,
 		.ptr = {
 			filename,
@@ -662,7 +655,6 @@ int cs_db_delete_file_symbols(cs_db_t *handle, const char *filename)
 	return cs_db_delete_general(
 			handle,
 			CS_TABLE_SYMBOLS_ID,
-			&col_name,
 			&col,
 			1);
 }
@@ -676,14 +668,13 @@ static enum cs_db_loopctl_t
 cs_db_select_iter(
 	cs_db_t *handle,
 	enum cs_db_table_id table_id,
-	const char **col_name,
 	cs_db_column_t *col,
 	int nr_col,
 	void *arg)
 {
 	int i;
 	for (i = 0; i < nr_col; i++)
-		printf("|%s|", col_name[i]);
+		printf("|%s|", col[i].name);
 
 	puts("");
 	return CS_DB_LOOP_CONT;
@@ -759,7 +750,6 @@ int main(int argc, char **argv)
 	ret = cs_db_select_general(
 		handle,
 		CS_TABLE_SYMBOLS_ID,
-		NULL,
 		NULL,
 		0,
 		cs_db_select_iter,
