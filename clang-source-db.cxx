@@ -150,17 +150,17 @@ int cs_db_select_general(
 		void *iter_arg
 )
 {
-	string sql_command =
-			string("SELECT * FROM ") +
-			string(cs_db_table_ops[table_id].t_name);
+	string sql_command;
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
 	int nr_res_col;
 	cs_db_column_t *res_col = NULL;
 
+	sql_command =
+		string("SELECT * FROM ") +
+		string(cs_db_table_ops[table_id].t_name);
 	if (nr_col)
 		sql_command += " WHERE ";
-
 	for (i = 0; i < nr_col; i++) {
 		sql_command += string(col[i].name) + " = ?";
 		if (i != nr_col - 1)
@@ -369,12 +369,14 @@ int cs_db_update_general(
 		cs_db_column_t *col,
 		int nr_col)
 {
-	string sql_command =
-			string("UPDATE ") +
-			string(cs_db_table_ops[table_id].t_name) +
-			string(" SET ");
+	string sql_command;
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
+
+	sql_command =
+		string("UPDATE ") +
+		string(cs_db_table_ops[table_id].t_name) +
+		string(" SET ");
 	for (i = 0; i < nr_col; i++) {
 		sql_command += string(col[i].name) + " = ?";
 		if (i != nr_col - 1)
@@ -444,15 +446,15 @@ int cs_db_delete_general(
 		cs_db_column_t *col,
 		int nr_col)
 {
-	string sql_command =
-			string("DELETE FROM ") +
-			string(cs_db_table_ops[table_id].t_name);
+	string sql_command;
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
 
+	sql_command =
+		string("DELETE FROM ") +
+		string(cs_db_table_ops[table_id].t_name);
 	if (nr_col)
 		sql_command += " WHERE ";
-
 	for (i = 0; i < nr_col; i++) {
 		sql_command += string(col[i].name) + " = ?";
 		if (i != nr_col - 1)
