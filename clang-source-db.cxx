@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string>
@@ -64,12 +63,73 @@ static const struct cs_db_table_ops cs_db_table_ops[CS_TABLE_MAX] = {
 		cs_db_init_table_symbol)
 };
 
+int cs_db_start_txn(cs_db_t *handle)
+{
+	sqlite3_stmt *stmt;
+	const char sql_command[] = "BEGIN";
+	int ret = sqlite3_prepare_v2(
+				handle,
+				sql_command,
+				sizeof(sql_command) - 1,
+				&stmt,
+				NULL);
+	if (ret != SQLITE_OK)
+		return ret;
+
+	while ((ret = sqlite3_step(stmt)) == SQLITE_ROW);
+	if (ret == SQLITE_DONE)
+		ret = SQLITE_OK;
+
+	sqlite3_finalize(stmt);
+
+	return ret;
+}
+
+int cs_db_commit_txn(cs_db_t *handle)
+{
+	sqlite3_stmt *stmt;
+	const char sql_command[] = "COMMIT";
+	int ret = sqlite3_prepare_v2(
+				handle,
+				sql_command,
+				sizeof(sql_command) - 1,
+				&stmt,
+				NULL);
+	if (ret != SQLITE_OK)
+		return ret;
+
+	while ((ret = sqlite3_step(stmt)) == SQLITE_ROW);
+	if (ret == SQLITE_DONE)
+		ret = SQLITE_OK;
+
+	sqlite3_finalize(stmt);
+
+	return ret;
+}
+
+void cs_db_rollback_txn(cs_db_t *handle)
+{
+	sqlite3_stmt *stmt;
+	const char sql_command[] = "ROLLBACK";
+	int ret = sqlite3_prepare_v2(
+				handle,
+				sql_command,
+				sizeof(sql_command) - 1,
+				&stmt,
+				NULL);
+	if (ret != SQLITE_OK)
+		return;
+
+	while (sqlite3_step(stmt) == SQLITE_ROW);
+	sqlite3_finalize(stmt);
+}
+
 static int cs_db_create_prepare(cs_db_t *handle)
 {
 	int i;
 	int ret = 0;
 
-	ret = sqlite3_exec(handle, "BEGIN;", NULL, NULL, NULL);
+	ret = cs_db_start_txn(handle);
 	if (ret != SQLITE_OK)
 		return ret;
 
@@ -83,9 +143,9 @@ static int cs_db_create_prepare(cs_db_t *handle)
 		}
 	}
 	if (ret == SQLITE_OK)
-		ret = sqlite3_exec(handle, "COMMIT;", NULL, NULL, NULL);
+		ret = cs_db_commit_txn(handle);
 	else
-		sqlite3_exec(handle, "ROLLBACK;", NULL, NULL, NULL);
+		cs_db_rollback_txn(handle);
 
 	return ret;
 }
@@ -118,21 +178,6 @@ int cs_db_open(
 void cs_db_close(cs_db_t *handle)
 {
 	sqlite3_close_v2(handle);
-}
-
-int cs_db_start_txn(cs_db_t *handle)
-{
-	return sqlite3_exec(handle, "BEGIN;", NULL, NULL, NULL);
-}
-
-int cs_db_commit_txn(cs_db_t *handle)
-{
-	return sqlite3_exec(handle, "COMMIT;", NULL, NULL, NULL);
-}
-
-void cs_db_rollback_txn(cs_db_t *handle)
-{
-	sqlite3_exec(handle, "ROLLBACK;", NULL, NULL, NULL);
 }
 
 int cs_db_select_general(
@@ -173,7 +218,7 @@ int cs_db_select_general(
 			sql_command.length(),
 			&stmt,
 			NULL);
-	if (ret)
+	if (ret != SQLITE_OK)
 		return ret;
 
 	for (i = 0; i < nr_col; i++) {
@@ -315,7 +360,7 @@ int cs_db_insert_general(
 			sql_command.length(),
 			&stmt,
 			NULL);
-	if (ret)
+	if (ret != SQLITE_OK)
 		return ret;
 
 	for (i = 0; i < nr_col; i++) {
@@ -390,7 +435,7 @@ int cs_db_update_general(
 			sql_command.length(),
 			&stmt,
 			NULL);
-	if (ret)
+	if (ret != SQLITE_OK)
 		return ret;
 
 	for (i = 0; i < nr_col; i++) {
@@ -467,7 +512,7 @@ int cs_db_delete_general(
 			sql_command.length(),
 			&stmt,
 			NULL);
-	if (ret)
+	if (ret != SQLITE_OK)
 		return ret;
 
 	for (i = 0; i < nr_col; i++) {
@@ -677,7 +722,7 @@ int cs_db_delete_file_symbols(cs_db_t *handle, const char *filename)
 			1);
 }
 
-#if 1
+#ifdef CLANG_SOURCE_DB_TEST
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -713,7 +758,7 @@ int main(int argc, char **argv)
 	}
 	ret = cs_db_open(argv[1], &handle, 0, 1);
 	if (ret != CS_DB_ERR_OK) {
-		puts(sqlite3_errmsg(handle));
+		puts(sqlite3_errstr(ret));
 		return EXIT_FAILURE;
 	}
 
