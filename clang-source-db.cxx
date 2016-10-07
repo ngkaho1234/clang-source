@@ -6,21 +6,6 @@
 
 using namespace std;
 
-enum cs_db_table_id {
-	CS_TABLE_SYMBOLS_ID,
-	CS_TABLE_FILES_ID,
-	CS_TABLE_MAX
-};
-#define CS_TABLE_SYMBOLS_NAME "cs_table_symbols"
-#define CS_TABLE_FILES_NAME "cs_table_files"
-
-#define CS_DB_TABLE_ENTRY(id, name, init_fn) \
-	[id] = {(name), (init_fn)},
-struct cs_db_table_ops {
-	char *t_name;
-	int (*t_init)(cs_db_t *handle, const struct cs_db_table_ops *table);
-};
-
 static int cs_db_init_table_symbol(cs_db_t *handle, const struct cs_db_table_ops *table)
 {
 	int ret;

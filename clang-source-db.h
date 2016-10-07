@@ -3,10 +3,6 @@
 
 #include <sqlite3.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 /*
  * Error code.
  *
@@ -58,6 +54,23 @@ typedef struct cs_db_column_s {
 	};
 } cs_db_column_t;
 
+enum cs_db_table_id {
+	CS_TABLE_SYMBOLS_ID,
+	CS_TABLE_FILES_ID,
+	CS_TABLE_MAX
+};
+
+#define CS_DB_TABLE_ENTRY(id, name, init_fn) \
+	[id] = {(name), (init_fn)},
+struct cs_db_table_ops {
+	char *t_name;
+	int (*t_init)(cs_db_t *handle, const struct cs_db_table_ops *table);
+};
+
+#define CS_TABLE_SYMBOLS_NAME "cs_table_symbols"
+#define CS_TABLE_FILES_NAME "cs_table_files"
+
+
 /*
  * cs_db_open - Open/Create a clang-source database
  */
@@ -71,9 +84,5 @@ int cs_db_open(
  * cs_db_close - Close the handle to a clang-source database
  */
 void cs_db_close(cs_db_t *handle);
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* __CLANG_SOURCE_DB_H__ */
