@@ -6,6 +6,26 @@
 
 using namespace std;
 
+static int cs_db_init_table_symbol(cs_db_t *handle, const struct cs_db_table_ops *table);
+
+cs_db_column_t cs_db_symbols_table[7] = {
+	{ .name = "usr", .type = CS_DB_TYPE_TEXT },
+	{ .name = "kind", .type = CS_DB_TYPE_INT },
+	{ .name = "name", .type = CS_DB_TYPE_TEXT },
+	{ .name = "type", .type = CS_DB_TYPE_TEXT },
+	{ .name = "file", .type = CS_DB_TYPE_TEXT },
+	{ .name = "start_col", .type = CS_DB_TYPE_INT },
+	{ .name = "start_line", .type = CS_DB_TYPE_INT },
+};
+
+struct cs_db_table_ops cs_db_table_ops[CS_TABLE_MAX] = {
+	CS_DB_TABLE_ENTRY(
+		CS_TABLE_SYMBOLS_ID,
+		CS_TABLE_SYMBOLS_NAME,
+		cs_db_init_table_symbol,
+		sizeof(cs_db_symbols_table) / sizeof(cs_db_column_t))
+};
+
 static int cs_db_init_table_symbol(cs_db_t *handle, const struct cs_db_table_ops *table)
 {
 	int ret;
@@ -40,13 +60,6 @@ static int cs_db_init_table_symbol(cs_db_t *handle, const struct cs_db_table_ops
 			NULL, NULL, NULL);
 	return ret;
 }
-
-static const struct cs_db_table_ops cs_db_table_ops[CS_TABLE_MAX] = {
-	CS_DB_TABLE_ENTRY(
-		CS_TABLE_SYMBOLS_ID,
-		CS_TABLE_SYMBOLS_NAME,
-		cs_db_init_table_symbol)
-};
 
 int cs_db_start_txn(cs_db_t *handle)
 {
@@ -165,8 +178,14 @@ void cs_db_close(cs_db_t *handle)
 	sqlite3_close_v2(handle);
 }
 
+void cs_db_finalize_query(cs_db_query_t *query)
+{
+	sqlite3_finalize(query);
+}
+
 int cs_db_select_general(
 		cs_db_t *handle,
+		cs_db_query_t **query, /* If @query is NULL, we won't return any prepared query structure */
 		enum cs_db_table_id table_id,
 		cs_db_column_t *col,
 		int nr_col,
@@ -186,25 +205,33 @@ int cs_db_select_general(
 	int nr_res_col;
 	cs_db_column_t *res_col = NULL;
 
-	sql_command =
-		string("SELECT * FROM ") +
-		string(cs_db_table_ops[table_id].t_name);
-	if (nr_col)
-		sql_command += " WHERE ";
-	for (i = 0; i < nr_col; i++) {
-		sql_command += string(col[i].name) + " = ?";
-		if (i != nr_col - 1)
-			sql_command += " AND ";
-	}
+	if (query) /* If caller provides us a query structure */
+		stmt = *query;
+	else
+		stmt = NULL;
 
-	ret = sqlite3_prepare_v2(
-			handle,
-			sql_command.c_str(),
-			sql_command.length(),
-			&stmt,
-			NULL);
-	if (ret != SQLITE_OK)
-		return ret;
+	if (!stmt) {
+		sql_command =
+			string("SELECT * FROM ") +
+			string(cs_db_table_ops[table_id].t_name);
+		if (nr_col)
+			sql_command += " WHERE ";
+		for (i = 0; i < nr_col; i++) {
+			sql_command += string(col[i].name) + " = ?";
+			if (i != nr_col - 1)
+				sql_command += " AND ";
+		}
+		ret = sqlite3_prepare_v2(
+				handle,
+				sql_command.c_str(),
+				sql_command.length(),
+				&stmt,
+				NULL);
+		if (ret != SQLITE_OK)
+			return ret;
+
+	} else
+		sqlite3_reset(stmt);
 
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
@@ -301,7 +328,12 @@ int cs_db_select_general(
 	if (ret == SQLITE_DONE)
 		ret = SQLITE_OK;
 cleanup:
-	sqlite3_finalize(stmt);
+	if (!query) /* If caller doesn't want a query */
+		sqlite3_finalize(stmt);
+	else if (!*query && ret == SQLITE_OK) /* If caller wants a query structure but @query doesn't contain anything... */
+		*query = stmt;
+	else
+		sqlite3_finalize(stmt);
 
 	if (res_col)
 		delete[] res_col;
@@ -311,6 +343,7 @@ cleanup:
 
 int cs_db_insert_general(
 		cs_db_t *handle,
+		cs_db_query_t **query, /* If @query is NULL, we won't return any prepared query structure */
 		enum cs_db_table_id table_id,
 		cs_db_column_t *col,
 		int nr_col)
@@ -319,34 +352,43 @@ int cs_db_insert_general(
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
 
-	sql_command =
-		string("INSERT INTO ") +
-		string(cs_db_table_ops[table_id].t_name) +
-		string("(");
-	for (i = 0; i < nr_col; i++) {
-		sql_command += col[i].name;
-		if (i != nr_col - 1)
-			sql_command += ", ";
-	}
-	sql_command += ")";
-	sql_command +=
-		string(" VALUES ") +
-		string("(");
-	for (i = 0; i < nr_col; i++) {
-		sql_command += "?";
-		if (i != nr_col - 1)
-			sql_command += ", ";
-	}
-	sql_command += ")";
+	if (query) /* If caller provides us a query structure */
+		stmt = *query;
+	else
+		stmt = NULL;
 
-	ret = sqlite3_prepare_v2(
-			handle,
-			sql_command.c_str(),
-			sql_command.length(),
-			&stmt,
-			NULL);
-	if (ret != SQLITE_OK)
-		return ret;
+	if (!stmt) {
+		sql_command =
+			string("INSERT INTO ") +
+			string(cs_db_table_ops[table_id].t_name) +
+			string("(");
+		for (i = 0; i < nr_col; i++) {
+			sql_command += col[i].name;
+			if (i != nr_col - 1)
+				sql_command += ", ";
+		}
+		sql_command += ")";
+		sql_command +=
+			string(" VALUES ") +
+			string("(");
+		for (i = 0; i < nr_col; i++) {
+			sql_command += "?";
+			if (i != nr_col - 1)
+				sql_command += ", ";
+		}
+		sql_command += ")";
+
+		ret = sqlite3_prepare_v2(
+				handle,
+				sql_command.c_str(),
+				sql_command.length(),
+				&stmt,
+				NULL);
+		if (ret != SQLITE_OK)
+			return ret;
+
+	} else
+		sqlite3_reset(stmt);
 
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
@@ -388,12 +430,19 @@ int cs_db_insert_general(
 	if (ret == SQLITE_DONE)
 		ret = SQLITE_OK;
 cleanup:
-	sqlite3_finalize(stmt);
+	if (!query) /* If caller doesn't want a query */
+		sqlite3_finalize(stmt);
+	else if (!*query && ret == SQLITE_OK) /* If caller wants a query structure but @query doesn't contain anything... */
+		*query = stmt;
+	else
+		sqlite3_finalize(stmt);
+
 	return ret;
 }
 
 int cs_db_update_general(
 		cs_db_t *handle,
+		cs_db_query_t **query, /* If @query is NULL, we won't return any prepared query structure */
 		enum cs_db_table_id table_id,
 		cs_db_id_t id,
 		cs_db_column_t *col,
@@ -403,25 +452,34 @@ int cs_db_update_general(
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
 
-	sql_command =
-		string("UPDATE ") +
-		string(cs_db_table_ops[table_id].t_name) +
-		string(" SET ");
-	for (i = 0; i < nr_col; i++) {
-		sql_command += string(col[i].name) + " = ?";
-		if (i != nr_col - 1)
-			sql_command += ", ";
-	}
-	sql_command += " WHERE id = ?";
+	if (query) /* If caller provides us a query structure */
+		stmt = *query;
+	else
+		stmt = NULL;
 
-	ret = sqlite3_prepare_v2(
-			handle,
-			sql_command.c_str(),
-			sql_command.length(),
-			&stmt,
-			NULL);
-	if (ret != SQLITE_OK)
-		return ret;
+	if (!stmt) {
+		sql_command =
+			string("UPDATE ") +
+			string(cs_db_table_ops[table_id].t_name) +
+			string(" SET ");
+		for (i = 0; i < nr_col; i++) {
+			sql_command += string(col[i].name) + " = ?";
+			if (i != nr_col - 1)
+				sql_command += ", ";
+		}
+		sql_command += " WHERE id = ?";
+
+		ret = sqlite3_prepare_v2(
+				handle,
+				sql_command.c_str(),
+				sql_command.length(),
+				&stmt,
+				NULL);
+		if (ret != SQLITE_OK)
+			return ret;
+
+	} else
+		sqlite3_reset(stmt);
 
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
@@ -466,12 +524,19 @@ int cs_db_update_general(
 	if (ret == SQLITE_DONE)
 		ret = SQLITE_OK;
 cleanup:
-	sqlite3_finalize(stmt);
+	if (!query) /* If caller doesn't want a query */
+		sqlite3_finalize(stmt);
+	else if (!*query && ret == SQLITE_OK) /* If caller wants a query structure but @query doesn't contain anything... */
+		*query = stmt;
+	else
+		sqlite3_finalize(stmt);
+
 	return ret;
 }
 
 int cs_db_delete_general(
 		cs_db_t *handle,
+		cs_db_query_t **query, /* If @query is NULL, we won't return any prepared query structure */
 		enum cs_db_table_id table_id,
 		cs_db_column_t *col,
 		int nr_col)
@@ -480,25 +545,34 @@ int cs_db_delete_general(
 	int i, ret = CS_DB_ERR_OK;
 	sqlite3_stmt *stmt;
 
-	sql_command =
-		string("DELETE FROM ") +
-		string(cs_db_table_ops[table_id].t_name);
-	if (nr_col)
-		sql_command += " WHERE ";
-	for (i = 0; i < nr_col; i++) {
-		sql_command += string(col[i].name) + " = ?";
-		if (i != nr_col - 1)
-			sql_command += " AND ";
-	}
+	if (query) /* If caller provides us a query structure */
+		stmt = *query;
+	else
+		stmt = NULL;
 
-	ret = sqlite3_prepare_v2(
-			handle,
-			sql_command.c_str(),
-			sql_command.length(),
-			&stmt,
-			NULL);
-	if (ret != SQLITE_OK)
-		return ret;
+	if (!stmt) {
+		sql_command =
+			string("DELETE FROM ") +
+			string(cs_db_table_ops[table_id].t_name);
+		if (nr_col)
+			sql_command += " WHERE ";
+		for (i = 0; i < nr_col; i++) {
+			sql_command += string(col[i].name) + " = ?";
+			if (i != nr_col - 1)
+				sql_command += " AND ";
+		}
+
+		ret = sqlite3_prepare_v2(
+				handle,
+				sql_command.c_str(),
+				sql_command.length(),
+				&stmt,
+				NULL);
+		if (ret != SQLITE_OK)
+			return ret;
+
+	} else
+		sqlite3_reset(stmt);
 
 	for (i = 0; i < nr_col; i++) {
 		switch (col[i].type) {
@@ -540,7 +614,13 @@ int cs_db_delete_general(
 	if (ret == SQLITE_DONE)
 		ret = SQLITE_OK;
 cleanup:
-	sqlite3_finalize(stmt);
+	if (!query) /* If caller doesn't want a query */
+		sqlite3_finalize(stmt);
+	else if (!*query && ret == SQLITE_OK) /* If caller wants a query structure but @query doesn't contain anything... */
+		*query = stmt;
+	else
+		sqlite3_finalize(stmt);
+
 	return ret;
 }
 
@@ -613,7 +693,7 @@ int cs_db_insert_symbol(
 			}
 		},
 	};
-	return cs_db_insert_general(handle, CS_TABLE_SYMBOLS_ID, col, 7);
+	return cs_db_insert_general(handle, NULL, CS_TABLE_SYMBOLS_ID, col, 7);
 }
 
 int cs_db_update_symbol(
@@ -686,7 +766,7 @@ int cs_db_update_symbol(
 			}
 		},
 	};
-	return cs_db_update_general(handle, CS_TABLE_SYMBOLS_ID, id, col, 7);
+	return cs_db_update_general(handle, NULL, CS_TABLE_SYMBOLS_ID, id, col, 7);
 }
 
 int cs_db_delete_file_symbols(cs_db_t *handle, const char *filename)
@@ -702,6 +782,7 @@ int cs_db_delete_file_symbols(cs_db_t *handle, const char *filename)
 	};
 	return cs_db_delete_general(
 			handle,
+			NULL,
 			CS_TABLE_SYMBOLS_ID,
 			&col,
 			1);
@@ -797,6 +878,7 @@ int main(int argc, char **argv)
 
 	ret = cs_db_select_general(
 		handle,
+		NULL,
 		CS_TABLE_SYMBOLS_ID,
 		NULL,
 		0,

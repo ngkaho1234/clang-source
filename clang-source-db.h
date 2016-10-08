@@ -23,6 +23,7 @@ enum cs_db_loopctl_t {
 };
 
 typedef sqlite3 cs_db_t;
+typedef sqlite3_stmt cs_db_query_t;
 typedef long long cs_db_id_t;
 
 enum cs_db_type_t {
@@ -60,11 +61,14 @@ enum cs_db_table_id {
 	CS_TABLE_MAX
 };
 
-#define CS_DB_TABLE_ENTRY(id, name, init_fn) \
-	[id] = {(name), (init_fn)},
+#define CS_DB_TABLE_ENTRY(id, name, init_fn, nr_columns) \
+	[id] = { .t_name = (name), .t_init = (init_fn), .t_nr_columns = (nr_columns) },
 struct cs_db_table_ops {
 	char *t_name;
 	int (*t_init)(cs_db_t *handle, const struct cs_db_table_ops *table);
+
+	int t_nr_columns; /* Nr. of columns. (ID is not accounted into this field) */
+	cs_db_column_t *columns; /* Just ignore the data fields */
 };
 
 #define CS_TABLE_SYMBOLS_NAME "cs_table_symbols"
