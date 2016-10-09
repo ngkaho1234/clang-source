@@ -328,19 +328,12 @@ int cs_db_select_general(
 	if (ret == SQLITE_DONE)
 		ret = SQLITE_OK;
 cleanup:
-	/* If caller doesn't want a query */
-	if (!query)
+	if (!query) /* If caller doesn't want a query */
 		sqlite3_finalize(stmt);
-	else if (!*query) {
-		/*
-		 * If caller wants a query structure
-		 * but @query doesn't contain anything...
-		 */
-		if (ret == SQLITE_OK)	
-			*query = stmt;
-		else
-			sqlite3_finalize(stmt);
-	}
+	else if (!*query && ret == SQLITE_OK) /* If caller wants a query structure but @query doesn't contain anything... */
+		*query = stmt;
+	else
+		sqlite3_finalize(stmt);
 
 	if (res_col)
 		delete[] res_col;
@@ -437,19 +430,12 @@ int cs_db_insert_general(
 	if (ret == SQLITE_DONE)
 		ret = SQLITE_OK;
 cleanup:
-	/* If caller doesn't want a query */
-	if (!query)
+	if (!query) /* If caller doesn't want a query */
 		sqlite3_finalize(stmt);
-	else if (!*query) {
-		/*
-		 * If caller wants a query structure
-		 * but @query doesn't contain anything...
-		 */
-		if (ret == SQLITE_OK)	
-			*query = stmt;
-		else
-			sqlite3_finalize(stmt);
-	}
+	else if (!*query && ret == SQLITE_OK) /* If caller wants a query structure but @query doesn't contain anything... */
+		*query = stmt;
+	else
+		sqlite3_finalize(stmt);
 
 	return ret;
 }
@@ -538,19 +524,12 @@ int cs_db_update_general(
 	if (ret == SQLITE_DONE)
 		ret = SQLITE_OK;
 cleanup:
-	/* If caller doesn't want a query */
-	if (!query)
+	if (!query) /* If caller doesn't want a query */
 		sqlite3_finalize(stmt);
-	else if (!*query) {
-		/*
-		 * If caller wants a query structure
-		 * but @query doesn't contain anything...
-		 */
-		if (ret == SQLITE_OK)	
-			*query = stmt;
-		else
-			sqlite3_finalize(stmt);
-	}
+	else if (!*query && ret == SQLITE_OK) /* If caller wants a query structure but @query doesn't contain anything... */
+		*query = stmt;
+	else
+		sqlite3_finalize(stmt);
 
 	return ret;
 }
@@ -635,19 +614,12 @@ int cs_db_delete_general(
 	if (ret == SQLITE_DONE)
 		ret = SQLITE_OK;
 cleanup:
-	/* If caller doesn't want a query */
-	if (!query)
+	if (!query) /* If caller doesn't want a query */
 		sqlite3_finalize(stmt);
-	else if (!*query) {
-		/*
-		 * If caller wants a query structure
-		 * but @query doesn't contain anything...
-		 */
-		if (ret == SQLITE_OK)	
-			*query = stmt;
-		else
-			sqlite3_finalize(stmt);
-	}
+	else if (!*query && ret == SQLITE_OK) /* If caller wants a query structure but @query doesn't contain anything... */
+		*query = stmt;
+	else
+		sqlite3_finalize(stmt);
 
 	return ret;
 }
