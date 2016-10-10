@@ -200,6 +200,11 @@ static void csdb_destroy_column(void *data)
 	free(data);
 }
 
+int csdb_column_count(void *stmt)
+{
+	return sqlite3_column_count(stmt);
+}
+
 /*
  * Index starts from 0
  */
@@ -227,7 +232,7 @@ int csdb_bind(void *stmt, int idx, csdb_column_t *column)
 		ret = sqlite3_bind_text64(
 				stmt,
 				idx + 1,
-				(char *)column->ptr.data,
+				(char *)data,
 				column->ptr.size,
 				csdb_destroy_column,
 				SQLITE_UTF8);
@@ -242,15 +247,13 @@ int csdb_bind(void *stmt, int idx, csdb_column_t *column)
 		ret = sqlite3_bind_blob64(
 				stmt,
 				idx + 1,
-				(char *)column->ptr.data,
+				(char *)data,
 				column->ptr.size,
 				csdb_destroy_column);
 		break;
 	default:
 		ret = CSDB_ERR_INVAL;
 	}
-	if (ret != CSDB_ERR_OK && data)
-		csdb_destroy_column(data);
 
 	return ret;
 }
@@ -355,10 +358,20 @@ void csdb_free_query(void *stmt)
 static int csdb_delete_file_symbols(csdb_t *handle, const char *file)
 {
 	void *stmt = NULL;
+	csdb_column_t column;
 	int ret = csdb_prepare_query(handle, &stmt,
-			CSDB_OP_DELETE CS_TABLE_SYMBOLS_NAME CSDB_OP_CONDITIONS "file = '%s'", file);
+			CSDB_OP_DELETE CS_TABLE_SYMBOLS_NAME CSDB_OP_CONDITIONS "file = ?");
 	if (ret != CSDB_ERR_OK)
 		return ret;
+
+	column.type = CSDB_TYPE_TEXT;
+	column.ptr.data = file;
+	column.ptr.size = strlen(file);
+	ret = csdb_bind(stmt, 0, &column);
+	if (ret != CSDB_ERR_OK) {
+		csdb_free_query(stmt);
+		return ret;
+	}
 
 	ret = csdb_query(handle, stmt, NULL, NULL);
 	csdb_free_query(stmt);
