@@ -7,40 +7,43 @@
  * Error code.
  *
  * SQLite3 error code should be positive integers, while
- * CS_DB-specific error code should be negative integers.
+ * CSDB-specific error code should be negative integers.
  */
-#define CS_DB_ERR_OK SQLITE_OK
-#define CS_DB_ERR_CORRUPTED (CS_DB_ERR_OK - 1)
-#define CS_DB_ERR_NOMEM (CS_DB_ERR_OK - 2)
-#define CS_DB_ERR_INVAL (CS_DB_ERR_OK - 3)
+#define CSDB_ERR_OK SQLITE_OK
+#define CSDB_ERR_CORRUPTED (CSDB_ERR_OK - 1)
+#define CSDB_ERR_NOMEM (CSDB_ERR_OK - 2)
+#define CSDB_ERR_INVAL (CSDB_ERR_OK - 3)
+
+/*
+ * Query macros
+ */
+#define CSDB_OP_INSERT "INSERT INTO "
+#define CSDB_OP_DELETE "DELETE FROM "
+#define CSDB_OP_UPDATE "UPDATE "
+#define CSDB_OP_SELECT "SELECT "
+#define CSDB_OP_CONDITIONS " WHERE "
 
 /*
  * Loop control
  */
-enum cs_db_loopctl_t {
-	CS_DB_LOOP_CONT = 0,
-	CS_DB_LOOP_BREAK = 1,
+enum csdb_loopctl_t {
+	CSDB_LOOP_CONT = 0,
+	CSDB_LOOP_BREAK = 1,
 };
 
-typedef sqlite3 cs_db_t;
-typedef long long cs_db_id_t;
+typedef sqlite3 csdb_t;
+typedef sqlite3_uint64 csdb_id_t;
 
-enum cs_db_type_t {
-	CS_DB_TYPE_INT,
-	CS_DB_TYPE_FLOAT,
-	CS_DB_TYPE_TEXT,
-	CS_DB_TYPE_BLOB,
-	CS_DB_TYPE_NULL,
+enum csdb_type_t {
+	CSDB_TYPE_INT,
+	CSDB_TYPE_FLOAT,
+	CSDB_TYPE_TEXT,
+	CSDB_TYPE_BLOB,
+	CSDB_TYPE_NULL,
 };
 
-enum cs_db_exceptions {
-	CS_DB_EXCEPT_NULL,
-	CS_DB_EXCEPT_UNKNOWN,
-};
-
-typedef struct cs_db_column_s {
-	const char *name;
-	cs_db_type_t type;
+typedef struct csdb_column_s {
+	enum csdb_type_t type;
 	union {
 		union {
 			long long integer;
@@ -49,22 +52,21 @@ typedef struct cs_db_column_s {
 		struct {
 			const void *data;
 			sqlite3_uint64 size;
-			void (*post_op_cb)(void *);
 		} ptr;
 	};
-} cs_db_column_t;
+} csdb_column_t;
 
-enum cs_db_table_id {
+enum csdb_table_id {
 	CS_TABLE_SYMBOLS_ID,
 	CS_TABLE_FILES_ID,
 	CS_TABLE_MAX
 };
 
-#define CS_DB_TABLE_ENTRY(id, name, init_fn) \
+#define CSDB_TABLE_ENTRY(id, name, init_fn) \
 	[id] = {(name), (init_fn)},
-struct cs_db_table_ops {
+struct csdb_table_ops {
 	char *t_name;
-	int (*t_init)(cs_db_t *handle, const struct cs_db_table_ops *table);
+	int (*t_init)(csdb_t *handle, const struct csdb_table_ops *table);
 };
 
 #define CS_TABLE_SYMBOLS_NAME "cs_table_symbols"
@@ -72,17 +74,17 @@ struct cs_db_table_ops {
 
 
 /*
- * cs_db_open - Open/Create a clang-source database
+ * csdb_open - Open/Create a clang-source database
  */
-int cs_db_open(
+int csdb_open(
 	const char *filename,
-	cs_db_t **handle,
+	csdb_t **handle,
 	int ro,
 	int create);
 
 /*
- * cs_db_close - Close the handle to a clang-source database
+ * csdb_close - Close the handle to a clang-source database
  */
-void cs_db_close(cs_db_t *handle);
+void csdb_close(csdb_t *handle);
 
 #endif /* __CLANG_SOURCE_DB_H__ */

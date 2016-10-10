@@ -9,7 +9,7 @@ find_package(LibClang REQUIRED)
 find_package(Msgpack REQUIRED)
 find_package(SQLite3 REQUIRED)
 
-set(COMMON clang-source-db.cxx)
+set(COMMON clang-source-db.c)
 
 include_directories(
     SYSTEM
