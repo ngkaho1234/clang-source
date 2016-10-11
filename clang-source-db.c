@@ -168,14 +168,36 @@ void csdb_close(csdb_t *handle)
 	sqlite3_close_v2(handle);
 }
 
+int csdb_vasprintf(char **strp, const char *fmt, va_list args)
+{
+	int strsz;
+	char *buf;
+	strsz = vsnprintf(NULL, 0, fmt, args);
+	if (strsz < 0 || !strp)
+		return strsz;
+
+	buf = (char *)malloc(strsz + 1);
+	if (!buf) {
+		*strp = NULL;
+		return -1;
+	}
+
+	assert(vsnprintf(buf, strsz + 1, fmt, args) >= 0);
+	*strp = buf;
+	return strsz;
+}
+
 int csdb_prepare_query(csdb_t *handle, void **stmt, const char *fmt, ...)
 {
 	int ret = CSDB_ERR_NOMEM;
 	char *str;
 	va_list args;
+
 	va_start(args, fmt);
-	if (vasprintf(&str, fmt, args) == -1)
-		goto cleanup;
+	ret = csdb_vasprintf(&str, fmt, args);
+	va_end(args);
+	if (ret == -1)
+		return CSDB_ERR_NOMEM;
 
 	ret = sqlite3_prepare_v2(
 			handle,
@@ -185,8 +207,6 @@ int csdb_prepare_query(csdb_t *handle, void **stmt, const char *fmt, ...)
 			NULL);
 
 	free(str);
-cleanup:
-	va_end(args);
 	return ret;
 }
 
