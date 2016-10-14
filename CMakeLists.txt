@@ -22,6 +22,7 @@ if (USE_CLANG)
     set(CMAKE_C_COMPILER clang)
     set(CMAKE_CXX_COMPILER clang++)
     add_definitions(-DCLANG_SOURCE_DB_TEST)
+    add_definitions(-DCLANG_SOURCE_INDEXER_TEST)
 endif (USE_CLANG)
 
 #add_executable(clang-source-server ${COMMON} clang-source-server.c)
@@ -32,6 +33,12 @@ endif (USE_CLANG)
 #)
 add_executable(clang-source-db ${COMMON})
 target_link_libraries(clang-source-db
+    ${LibClang_LIBRARIES}
+    ${MSGPACK_LIBRARIES}
+    ${SQLITE3_LIBRARIES}
+)
+add_executable(clang-source-indexer clang-source-indexer.c)
+target_link_libraries(clang-source-indexer
     ${LibClang_LIBRARIES}
     ${MSGPACK_LIBRARIES}
     ${SQLITE3_LIBRARIES}
