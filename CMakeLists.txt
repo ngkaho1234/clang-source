@@ -9,7 +9,7 @@ find_package(LibClang REQUIRED)
 find_package(Msgpack REQUIRED)
 find_package(SQLite3 REQUIRED)
 
-set(COMMON clang-source-db.c)
+set(COMMON db.c)
 
 include_directories(
     SYSTEM
@@ -37,7 +37,7 @@ target_link_libraries(clang-source-db
     ${MSGPACK_LIBRARIES}
     ${SQLITE3_LIBRARIES}
 )
-add_executable(clang-source-indexer clang-source-indexer.c)
+add_executable(clang-source-indexer indexer.c)
 target_link_libraries(clang-source-indexer
     ${LibClang_LIBRARIES}
     ${MSGPACK_LIBRARIES}

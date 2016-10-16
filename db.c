@@ -6,7 +6,7 @@
 #include <malloc.h>
 #include <string.h>
 
-#include "clang-source-db.h"
+#include "db.h"
 
 int csdb_init_table_symbol(
 		csdb_t *handle, const struct csdb_table_ops *table)
