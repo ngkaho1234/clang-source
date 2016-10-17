@@ -8,48 +8,7 @@
 
 #include "db.h"
 
-int csdb_init_table_symbol(
-		csdb_t *handle, const struct csdb_table_ops *table)
-{
-	int ret;
-	const char *sql_command =
-		"CREATE TABLE IF NOT EXISTS " CS_TABLE_SYMBOLS_NAME
-		" ( "
-		"id integer PRIMARY KEY, "
-		"usr text NOT NULL, "
-		"kind integer NOT NULL, "
-		"name text NOT NULL, "
-		"type text, "
-		"file text NOT NULL, "
-		"start_line integer NOT NULL, "
-		"start_col integer NOT NULL"
-		" );";
-	(void)table;
-
-	ret = sqlite3_exec(handle, sql_command, NULL, NULL, NULL);
-	if (ret != SQLITE_OK)
-		return ret;
-
-	ret = sqlite3_exec(
-			handle,
-			"CREATE INDEX IF NOT EXISTS idx_symbols_name ON " CS_TABLE_SYMBOLS_NAME " (name);",
-			NULL, NULL, NULL);
-	if (ret != SQLITE_OK)
-		return ret;
-
-	ret = sqlite3_exec(
-			handle,
-			"CREATE INDEX IF NOT EXISTS idx_symbols_file ON " CS_TABLE_SYMBOLS_NAME " (file);",
-			NULL, NULL, NULL);
-	return ret;
-}
-
-static const struct csdb_table_ops csdb_table_ops[CS_TABLE_MAX] = {
-	CSDB_TABLE_ENTRY(
-		CS_TABLE_SYMBOLS_ID,
-		CS_TABLE_SYMBOLS_NAME,
-		csdb_init_table_symbol)
-};
+extern const struct csdb_table_ops csdb_table_ops[CS_TABLE_MAX];
 
 int csdb_start_txn(csdb_t *handle)
 {
