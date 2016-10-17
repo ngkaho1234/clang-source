@@ -1,11 +1,13 @@
 #ifndef __CLANG_SOURCE_SYMBOLS_H__
 #define __CLANG_SOURCE_SYMBOLS_H__
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <clang-c/Index.h>
 
 #include "db.h"
+#include "db_tables.h"
 
 struct cs_symbol {
 	const char	*cs_usr;

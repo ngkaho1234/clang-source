@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "db.h"
+#include "db_tables.h"
 
 extern const struct csdb_table_ops csdb_table_ops[CS_TABLE_MAX];
 

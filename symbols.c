@@ -36,3 +36,9 @@ int csdb_init_table_symbol(
 			NULL, NULL, NULL);
 	return ret;
 }
+
+int csdb_symbol_add(csdb_t *handle, struct cs_symbol *sym)
+{
+	void *stmt;
+	csdb_prepare_query(handle, &stmt, CSDB_OP_INSERT );
+}
