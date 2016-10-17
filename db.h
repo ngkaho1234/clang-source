@@ -87,4 +87,26 @@ int csdb_open(
  */
 void csdb_close(csdb_t *handle);
 
+int csdb_start_txn(csdb_t *handle);
+int csdb_commit_txn(csdb_t *handle);
+void csdb_rollback_txn(csdb_t *handle);
+
+int csdb_prepare_query(csdb_t *handle, void **stmt, const char *fmt, ...);
+int csdb_clear_bindings(void *stmt);
+int csdb_column_count(void *stmt);
+int csdb_bind(void *stmt, int idx, csdb_column_t *column);
+int csdb_query(
+	csdb_t *handle,
+	void *stmt,
+	enum csdb_loopctl_t (*iter)(
+		csdb_t *handle,
+		const char **columns_name,
+		csdb_column_t *columns,
+		int nr_columns,
+		void *arg
+	),
+	void *iter_arg
+);
+void csdb_free_query(void *stmt);
+
 #endif /* __CLANG_SOURCE_DB_H__ */
