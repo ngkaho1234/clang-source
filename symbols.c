@@ -39,6 +39,13 @@ int csdb_init_table_symbol(
 
 int csdb_symbol_add(csdb_t *handle, struct cs_symbol *sym)
 {
+	int ret;
 	void *stmt;
-	csdb_prepare_query(handle, &stmt, CSDB_OP_INSERT );
+	ret = csdb_prepare_query(handle, &stmt, CSDB_FMT_INSERT,
+				"usr, kind, name, type, is_def, file, start_line, start_col",
+				"?, ?, ?, ?, ?, ?, ?, ?");
+	if (ret != CSDB_ERR_OK)
+		return ret;
+
+	
 }

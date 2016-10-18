@@ -23,6 +23,8 @@
 #define CSDB_OP_SELECT "SELECT "
 #define CSDB_OP_CONDITIONS " WHERE "
 
+#define CSDB_FMT_INSERT "INSERT INTO %s (%s) VALUES (%s)"
+
 /*
  * Loop control
  */
