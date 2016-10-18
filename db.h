@@ -47,7 +47,7 @@ typedef struct csdb_column_s {
 	union {
 		union {
 			long long integer;
-			double fp;
+			double real;
 		} non_ptr;
 		struct {
 			const void *data;

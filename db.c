@@ -197,7 +197,7 @@ int csdb_bind(void *stmt, int idx, csdb_column_t *column)
 		ret = sqlite3_bind_int64(stmt, idx + 1, column->non_ptr.integer);
 		break;
 	case CSDB_TYPE_FLOAT:
-		ret = sqlite3_bind_double(stmt, idx + 1, column->non_ptr.fp);
+		ret = sqlite3_bind_double(stmt, idx + 1, column->non_ptr.real);
 		break;
 	case CSDB_TYPE_NULL:
 		ret = sqlite3_bind_null(stmt, idx + 1);
@@ -277,7 +277,7 @@ int csdb_query(
 				break;
 			case SQLITE_FLOAT:
 				columns[i].type = CSDB_TYPE_FLOAT;
-				columns[i].non_ptr.fp =
+				columns[i].non_ptr.real =
 					sqlite3_column_double(stmt, i + 1);
 				break;
 			case SQLITE_NULL:
