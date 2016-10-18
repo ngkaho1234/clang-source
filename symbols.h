@@ -6,7 +6,7 @@
 
 #include <clang-c/Index.h>
 
-#include "db.h"
+#include "db_lowlevel.h"
 #include "db_tables.h"
 
 struct cs_symbol {
