@@ -37,6 +37,10 @@ int csdb_init_table_symbol(
 	return ret;
 }
 
+/*
+ * Add file, symbols/Delete symbols, file/Query
+ */
+
 int csdb_symbol_add(csdb_t *handle, struct cs_symbol *sym)
 {
 	int ret;

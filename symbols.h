@@ -20,6 +20,17 @@ struct cs_symbol {
 	uint32_t	 cs_stop_line;
 };
 
+enum CS_QUERY_STMT {
+	CS_QUERY_STMT_INSERT,
+	CS_QUERY_STMT_UPDATE,
+	CS_QUERY_STMT_DELETE_BY_FILE,
+	CS_QUERY_STMT_SELECT_BY_NAME,
+	CS_QUERY_STMT_MAX,
+};
+struct cs_query_symbol {
+	void *qs_stmt[CS_QUERY_STMT_MAX];
+};
+
 int csdb_init_table_symbol(
 		csdb_t *handle, const struct csdb_table_ops *table);
 

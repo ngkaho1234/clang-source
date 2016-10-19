@@ -67,7 +67,7 @@ int csdb_open(
 	csdb_t **handle,
 	int ro,
 	int create);
-
+int csdb_create_prepare(csdb_t *handle);
 /*
  * csdb_close - Close the handle to a clang-source database
  */

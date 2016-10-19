@@ -7,9 +7,6 @@
 #include <string.h>
 
 #include "db_lowlevel.h"
-#include "db_tables.h"
-
-extern const struct csdb_table_ops csdb_table_ops[CS_TABLE_MAX];
 
 int csdb_start_txn(csdb_t *handle)
 {
@@ -70,32 +67,6 @@ void csdb_rollback_txn(csdb_t *handle)
 
 	while (sqlite3_step(stmt) == SQLITE_ROW);
 	sqlite3_finalize(stmt);
-}
-
-static int csdb_create_prepare(csdb_t *handle)
-{
-	int i;
-	int ret = 0;
-
-	ret = csdb_start_txn(handle);
-	if (ret != SQLITE_OK)
-		return ret;
-
-	for (i = 0; i < CS_TABLE_MAX; i++) {
-		if (csdb_table_ops[i].t_init) {
-			ret = csdb_table_ops[i].t_init(
-							handle,
-							&csdb_table_ops[i]);
-			if (ret != SQLITE_OK)
-				break;
-		}
-	}
-	if (ret == SQLITE_OK)
-		ret = csdb_commit_txn(handle);
-	else
-		csdb_rollback_txn(handle);
-
-	return ret;
 }
 
 int csdb_open(
@@ -334,6 +305,8 @@ void csdb_free_query(void *stmt)
 
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "db_tables.h"
 
 static int csdb_delete_file_symbols(csdb_t *handle, const char *file)
 {
