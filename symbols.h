@@ -17,18 +17,7 @@ struct cs_symbol {
 	bool		 cs_is_def;
 	const char	*cs_file_path;
 	uint32_t	 cs_start_line;
-	uint32_t	 cs_stop_line;
-};
-
-enum CS_QUERY_STMT {
-	CS_QUERY_STMT_INSERT,
-	CS_QUERY_STMT_UPDATE,
-	CS_QUERY_STMT_DELETE_BY_FILE,
-	CS_QUERY_STMT_SELECT_BY_NAME,
-	CS_QUERY_STMT_MAX,
-};
-struct cs_query_symbol {
-	void *qs_stmt[CS_QUERY_STMT_MAX];
+	uint32_t	 cs_start_col;
 };
 
 int csdb_init_table_symbol(
